@@ -1,0 +1,7 @@
+# Environment
+.env
+*.env
+# Django artifacts
+__pycache__/
+*.pyc
+media/
