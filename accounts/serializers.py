@@ -1,6 +1,5 @@
-# ecom_project/accounts/serializers.py
 from rest_framework import serializers
-from django.contrib.auth import authenticate, password_validation, get_user_model
+from django.contrib.auth import password_validation, get_user_model
 from .models import OTP
 from .utils import generate_otp_code, send_otp_via_email
 from django.utils import timezone
@@ -19,15 +18,10 @@ class SignupSerializer(serializers.Serializer):
     def validate(self, data):
         if data["password"] != data["confirm_password"]:
             raise serializers.ValidationError({"password": "Passwords do not match."})
-        # validate password strength
-        try:
-            password_validation.validate_password(data["password"], user=None)
-        except Exception as e:
-            raise serializers.ValidationError({"password": list(e.messages)})
         if User.objects.filter(email__iexact=data["email"]).exists():
-            raise serializers.ValidationError({"email": "User with this email already exists."})
+            raise serializers.ValidationError({"email": "Email already exists in the system."})
         if User.objects.filter(phone_number=data["phone_number"]).exists():
-            raise serializers.ValidationError({"phone_number": "User with this phone number already exists."})
+            raise serializers.ValidationError({"phone_number": "Phone number already exists in the system."})
         return data
 
     def create(self, validated_data):
@@ -44,7 +38,7 @@ class SignupSerializer(serializers.Serializer):
         # create OTP
         code = generate_otp_code()
         otp = OTP.objects.create(email=user.email, code=code, purpose="signup", expires_at=timezone.now() + timedelta(minutes=10))
-        # send email (console)
+        # send email
         send_otp_via_email(user.email, code, "Signup")
         return user
 
@@ -71,7 +65,6 @@ class VerifyOTPSerializer(serializers.Serializer):
         otp_obj = self.validated_data["otp_obj"]
         otp_obj.is_verified = True
         otp_obj.save()
-        # If purpose is signup -> activate user
         if otp_obj.purpose == "signup":
             from django.contrib.auth import get_user_model
             User = get_user_model()
@@ -88,7 +81,6 @@ class ResendOTPSerializer(serializers.Serializer):
     purpose = serializers.ChoiceField(choices=OTP.PURPOSE_CHOICES)
 
     def validate(self, data):
-        # if purpose is signup and user already active -> can't resend
         if data["purpose"] == "signup":
             qs = User.objects.filter(email__iexact=data["email"])
             if qs.exists() and qs.first().is_active:
@@ -125,7 +117,6 @@ class ResetPasswordSerializer(serializers.Serializer):
         if data["new_password"] != data["confirm_password"]:
             raise serializers.ValidationError({"password": "Passwords do not match."})
         try:
-            # Must have a verified OTP for reset
             otp_obj = OTP.objects.filter(email__iexact=data["email"], purpose="reset", is_verified=True).order_by("-created_at").first()
             if not otp_obj:
                 raise serializers.ValidationError({"otp": "No verified OTP found for this email. Please verify OTP first."})
@@ -134,12 +125,6 @@ class ResetPasswordSerializer(serializers.Serializer):
             data["otp_obj"] = otp_obj
         except OTP.DoesNotExist:
             raise serializers.ValidationError({"otp": "No verified OTP found."})
-        # validate password strength
-        try:
-            password_validation.validate_password(data["new_password"], user=None)
-        except Exception as e:
-            raise serializers.ValidationError({"password": list(e.messages)})
-        return data
 
     def save(self):
         email = self.validated_data["email"]
@@ -147,7 +132,6 @@ class ResetPasswordSerializer(serializers.Serializer):
         user = User.objects.get(email__iexact=email)
         user.set_password(new_password)
         user.save()
-        # consume OTP
         otp_obj = self.validated_data["otp_obj"]
         otp_obj.is_verified = False
         otp_obj.save()
@@ -161,10 +145,6 @@ class ChangePasswordSerializer(serializers.Serializer):
     def validate(self, data):
         if data["new_password"] != data["confirm_password"]:
             raise serializers.ValidationError({"password": "New passwords do not match."})
-        try:
-            password_validation.validate_password(data["new_password"], user=self.context["request"].user)
-        except Exception as e:
-            raise serializers.ValidationError({"new_password": list(e.messages)})
         return data
 
     def validate_old_password(self, value):

@@ -21,10 +21,10 @@ class CartItem(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     variation = models.ForeignKey(ProductVariation, on_delete=models.SET_NULL, null=True, blank=True)
     qty = models.PositiveIntegerField(default=1)
-    price_at_add = models.DecimalField(max_digits=12, decimal_places=2)  # snapshot price when added
+    price_at_add = models.DecimalField(max_digits=12, decimal_places=2)
 
     class Meta:
-        unique_together = ("cart", "product", "variation")  # one entry per product+variation per cart
+        unique_together = ("cart", "product", "variation")
 
     def __str__(self):
         return f"{self.cart.user.email} - {self.product.name} ({self.qty})"

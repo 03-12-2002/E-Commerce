@@ -1,9 +1,5 @@
-# ecom_project/accounts/urls.py
 from django.urls import path
-from .views import (
-    SignupView, VerifyOTPView, ResendOTPView, EmailTokenObtainPairView,
-    ForgotPasswordView, ResetPasswordView, ChangePasswordView
-)
+from .views import *
 
 urlpatterns = [
     path("signup/", SignupView.as_view(), name="signup"),

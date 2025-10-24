@@ -93,11 +93,11 @@ WSGI_APPLICATION = 'E_Commerce.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv("DB_NAME", "ecommerce"),
-        'USER': os.getenv("DB_USER", "postgres"),
-        'PASSWORD': os.getenv("DB_PASSWORD", ""),
-        'HOST': os.getenv("DB_HOST", "localhost"),
-        'PORT': os.getenv("DB_PORT", "5432"),
+        'NAME': "ecommerce",
+        'USER': "postgres",
+        'PASSWORD': "root1234",
+        'HOST': "localhost",
+        'PORT': "5432",
     }
 }
 
@@ -156,8 +156,8 @@ EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+EMAIL_HOST_USER = os.getenv("aabhijith2357@gmail.com")
+EMAIL_HOST_PASSWORD = os.getenv("tjnr fxgx zidh xlfp")
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 
@@ -181,6 +181,5 @@ SIMPLE_JWT = {
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
-# Razorpay
-RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
-RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET")
+RAZORPAY_KEY_ID="rzp_test_RXIhi53mKdxDFV"
+RAZORPAY_KEY_SECRET="0455SalMKzkbm27MWf4y2RRI"

@@ -7,5 +7,5 @@ router.register(r"category", CategoryViewSet, basename="category")
 router.register(r"products", ProductViewSet, basename="products")
 
 urlpatterns = [
-    path("admin/", include(router.urls)),
+    path("", include(router.urls)),
 ]

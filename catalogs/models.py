@@ -1,10 +1,8 @@
 from django.db import models
 from django.utils.text import slugify
 from django.utils import timezone
-import uuid
 
 class Category(models.Model):
-    # Integer primary key (default)
     name = models.CharField(max_length=120, unique=True)
     description = models.TextField(blank=True, null=True)
     slug = models.SlugField(max_length=140, unique=True, blank=True)
@@ -34,6 +32,7 @@ class Product(models.Model):
     is_available = models.BooleanField(default=True)
     category = models.ForeignKey(Category, on_delete=models.PROTECT, related_name="products")
     slug = models.SlugField(max_length=300, unique=True, blank=True)
+    representative_image = models.ImageField(upload_to="product_images/representative/", blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -63,16 +62,11 @@ class ProductImage(models.Model):
         return f"Image for {self.product.name}"
 
 class ProductVariation(models.Model):
-    """
-    Represents a variation (combination) for a product.
-    Either color or size or both can be provided.
-    """
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="variations")
     color = models.CharField(max_length=64, blank=True, null=True)
     size = models.CharField(max_length=32, blank=True, null=True)
-    # sku = models.CharField(max_length=100, blank=True, null=True)
     price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True,
-                                help_text="Optional override price for this variation (if empty uses product.price)")
+            help_text="Optional override price for this variation (if empty uses product.price)")
     is_available = models.BooleanField(default=True)
 
     class Meta:

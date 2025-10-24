@@ -1,8 +1,7 @@
 from rest_framework import serializers
-from .models import Cart, CartItem, WishlistItem, Order, OrderItem
+from .models import *
 from catalogs.models import Product, ProductVariation
 from catalogs.serializers import ProductSerializer, ProductVariationSerializer
-from decimal import Decimal
 
 class CartItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)

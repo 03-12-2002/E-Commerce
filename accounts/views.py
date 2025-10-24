@@ -1,4 +1,3 @@
-# ecom_project/accounts/views.py
 from rest_framework.views import APIView
 from rest_framework import status, permissions
 from rest_framework.response import Response
@@ -19,7 +18,7 @@ class SignupView(APIView):
         serializer = SignupSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        return Response({"detail": "Signup successful. OTP sent to email."}, status=status.HTTP_201_CREATED)
+        return Response({"detail": "OTP sent to email."}, status=status.HTTP_201_CREATED)
 
 class VerifyOTPView(APIView):
     permission_classes = (permissions.AllowAny,)
@@ -66,12 +65,10 @@ class ChangePasswordView(APIView):
         serializer.save()
         return Response({"detail": "Password changed successfully."}, status=status.HTTP_200_OK)
 
-# Custom JWT token obtain serializer to accept email (username_field is email by default so this works)
 class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
-        # add custom claims if needed
         token["email"] = user.email
         return token
 

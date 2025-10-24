@@ -9,9 +9,9 @@ from datetime import timedelta
 class UserManager(BaseUserManager):
     def create_user(self, email, phone_number, first_name="", last_name="", password=None, **extra_fields):
         if not email:
-            raise ValueError("Users must have an email address")
+            raise ValueError("Email Required")
         if not phone_number:
-            raise ValueError("Users must have a phone number")
+            raise ValueError("Phone Number Required")
         email = self.normalize_email(email)
         user = self.model(email=email, phone_number=phone_number, first_name=first_name, last_name=last_name, **extra_fields)
         user.set_password(password)

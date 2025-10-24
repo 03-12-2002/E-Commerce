@@ -18,7 +18,7 @@ class ProductImageSerializer(serializers.ModelSerializer):
 class ProductVariationSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductVariation
-        fields = ["id", "color", "size", "price", "is_available"]# "sku",
+        fields = ["id", "color", "size", "price", "is_available"]
         read_only_fields = ["id"]
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -33,33 +33,24 @@ class ProductSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "slug", "images", "representative_image", "variations", "created_at"]
 
     def get_representative_image(self, obj):
+        request = self.context.get("request")
+        if obj.representative_image:
+            if request:
+                return request.build_absolute_uri(obj.representative_image.url)
+            return obj.representative_image.url
+        
         first = obj.images.first()
         if first:
-            request = self.context.get("request")
-            # image.url returns the relative URL; include request.build_absolute_uri if request present
             if request:
                 return request.build_absolute_uri(first.image.url)
             return first.image.url
         return None
 
     def to_internal_value(self, data):
-        # handle JSON string for variations if provided in form-data
         data = super().to_internal_value(data)
         return data
 
 class ProductCreateUpdateSerializer(serializers.ModelSerializer):
-    """
-    Serializer used for create/update via API.
-    Accepts:
-      - 'images' as multiple uploaded files (handled in view)
-      - 'variations' as a JSON array (string in form-data) OR as JSON list if request is application/json
-        Example variations JSON:
-        [
-          {"color": "Red", "size": "M", "price": "299.99", "is_available": true}, "sku": "R-M-001", 
-          {"color": "Red", "size": "L", "price": "299.99", "is_available": true}  "sku": "R-L-001", 
-        ]
-    """
-    # images not declared here; handled in view from request.FILES.getlist('images')
     variations = serializers.JSONField(required=False)
 
     class Meta:
@@ -68,7 +59,6 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
         read_only_fields = ["id"]
 
     def validate_variations(self, value):
-        # ensure it's a list of objects if provided
         if isinstance(value, str):
             try:
                 value = json.loads(value)
@@ -76,20 +66,22 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("Invalid JSON for variations.")
         if not isinstance(value, list):
             raise serializers.ValidationError("Variations must be a list.")
-        # further optional validation can be added
         return value
 
     @transaction.atomic
     def create(self, validated_data):
         variations_data = validated_data.pop("variations", [])
+        # ✅ Default is_available to True if missing
+        if "is_available" not in validated_data:
+            validated_data["is_available"] = True
+
         product = Product.objects.create(**validated_data)
-        # create variations if any
+
         for v in variations_data:
             ProductVariation.objects.create(
                 product=product,
                 color=v.get("color"),
                 size=v.get("size"),
-                # sku=v.get("sku"),
                 price=v.get("price") if v.get("price") not in (None, "") else None,
                 is_available=v.get("is_available", True),
             )
@@ -98,20 +90,21 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
     @transaction.atomic
     def update(self, instance, validated_data):
         variations_data = validated_data.pop("variations", None)
-        # update product fields
+        # ✅ Default is_available to True if missing
+        if "is_available" not in validated_data:
+            validated_data["is_available"] = True
+
         for attr, val in validated_data.items():
             setattr(instance, attr, val)
         instance.save()
-        # if variations provided: replace existing variations with provided set
+
         if variations_data is not None:
-            # delete old
             instance.variations.all().delete()
             for v in variations_data:
                 ProductVariation.objects.create(
                     product=instance,
                     color=v.get("color"),
                     size=v.get("size"),
-                    # sku=v.get("sku"),
                     price=v.get("price") if v.get("price") not in (None, "") else None,
                     is_available=v.get("is_available", True),
                 )

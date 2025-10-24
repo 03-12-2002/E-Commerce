@@ -1,4 +1,3 @@
-# <start of file> ecom_project/store/admin.py
 from django.contrib import admin
 from .models import Cart, CartItem, WishlistItem, Order, OrderItem
 
@@ -23,4 +22,3 @@ class OrderItemInline(admin.TabularInline):
 class OrderAdmin(admin.ModelAdmin):
     list_display = ("id", "user", "total_amount", "status", "created_at")
     inlines = [OrderItemInline]
-# <end of file>

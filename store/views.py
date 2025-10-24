@@ -1,24 +1,17 @@
 from rest_framework.views import APIView
 from rest_framework import status, permissions
 from rest_framework.response import Response
-from .models import Cart, CartItem, WishlistItem, Order, OrderItem
-from .serializers import (
-    CartSerializer, AddToCartSerializer, RemoveFromCartSerializer, CartItemSerializer,
-    WishlistSerializer, AddToWishlistSerializer, OrderSerializer
-)
-from django.shortcuts import get_object_or_404
+from .models import *
+from .serializers import *
 from decimal import Decimal
 from django.db import transaction
 from django.conf import settings
-import hmac, hashlib, random, string
 import razorpay
 
-# Utility to get or create a user's cart
 def get_or_create_cart(user):
     cart, _ = Cart.objects.get_or_create(user=user)
     return cart
 
-# CART endpoints
 class CartView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -38,9 +31,9 @@ class CartAddView(APIView):
         product = data["product"]
         variation = data.get("variation")
         qty = data.get("qty", 1)
-        # determine price_at_add: variation.price if set else product.price
+
         price = variation.price if (variation and variation.price is not None) else product.price
-        # check existing item
+
         cart_item, created = CartItem.objects.get_or_create(cart=cart, product=product, variation=variation,
                                                             defaults={"qty": qty, "price_at_add": price})
         if not created:
@@ -63,7 +56,6 @@ class CartRemoveView(APIView):
             except CartItem.DoesNotExist:
                 return Response({"detail": "Cart item not found."}, status=status.HTTP_404_NOT_FOUND)
             return Response({"detail": "Removed from cart."})
-        # else try remove by product+variation
         product_id = data.get("product_id")
         variation_id = data.get("variation_id")
         if not product_id:
@@ -84,7 +76,6 @@ class CartClearView(APIView):
         cart.items.all().delete()
         return Response({"detail": "Cart cleared."})
 
-# WISHLIST endpoints
 class WishlistListView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -117,18 +108,11 @@ class WishlistRemoveView(APIView):
             return Response({"detail": "Removed from wishlist."})
         return Response({"detail": "Not found in wishlist."}, status=status.HTTP_404_NOT_FOUND)
 
-# ORDERS
 class PlaceOrderView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     @transaction.atomic
     def post(self, request):
-        """
-        Place an order from cart contents.
-        Returns created order object with total_amount.
-        Client is expected to create a payment via Razorpay frontend and then call verify endpoint,
-        but for our backend-only flow we create order and return its id (and you may optionally set razorpay_order_id).
-        """
         cart = get_or_create_cart(request.user)
         items = cart.items.select_related("product", "variation").all()
         if not items.exists():
@@ -139,17 +123,15 @@ class PlaceOrderView(APIView):
             total += it.line_total()
 
         order = Order.objects.create(user=request.user, total_amount=total, status="PENDING")
-        # create order items
         for it in items:
             OrderItem.objects.create(order=order, product=it.product, variation=it.variation, qty=it.qty, price_at_order=it.price_at_add)
         
-        # --- Razorpay Order Creation ---
         try:
             client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
             razorpay_order = client.order.create({
-                "amount": int(total * 100),  # Razorpay expects amount in paise
+                "amount": int(total * 100),
                 "currency": "INR",
-                "payment_capture": 1,  # auto capture
+                "payment_capture": 1,
                 "notes": {"local_order_id": str(order.id), "user": request.user.email},
             })
             order.razorpay_order_id = razorpay_order.get("id")
@@ -162,7 +144,7 @@ class PlaceOrderView(APIView):
                 status=status.HTTP_502_BAD_GATEWAY
             )
 
-        return Response({"detail": "Order created.", "order_id": order.id, "total_amount": str(total), "razorpay_order_id": order.razorpay_order_id, "currency": "INR", "razorpay_data": razorpay_order}, status=status.HTTP_201_CREATED)
+        return Response({"detail": "Order created.", "order_id": order.id, "total_amount": str(total), "razorpay_order_id": order.razorpay_order_id, "currency": "INR"}, status=status.HTTP_201_CREATED)
 
 class ListOrdersView(APIView):
     permission_classes = [permissions.IsAuthenticated]
